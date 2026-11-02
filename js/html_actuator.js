@@ -61,8 +61,15 @@ HTMLActuator.prototype.addTile = function (tile) {
 
   this.applyClasses(wrapper, classes);
 
+  var gun  = this.gunForValue(tile.value);
+  var icon = document.createElement("img");
+  icon.classList.add("tile-icon");
+  icon.src = "img/guns/" + gun.toLowerCase() + ".png";
+  icon.alt = gun;
+  icon.title = gun;
+
   inner.classList.add("tile-inner");
-  inner.textContent = tile.value;
+  inner.appendChild(icon);
 
   if (tile.previousPosition) {
     // Make sure that the tile gets rendered in the previous position first
@@ -88,6 +95,19 @@ HTMLActuator.prototype.addTile = function (tile) {
 
   // Put the tile on the board
   this.tileContainer.appendChild(wrapper);
+};
+
+// Valorant gun progression: 2 = Classic, 4 = Shorty, ..., 2048 = Vandal,
+// then the bonus guns for super tiles (4096 = Phantom, ...)
+HTMLActuator.prototype.guns = [
+  "Classic", "Shorty", "Ghost", "Sheriff", "Stinger", "Spectre", "Ares",
+  "Bulldog", "Judge", "Guardian", "Vandal",
+  "Phantom", "Warden", "Outlaw", "Odin", "Operator"
+];
+
+HTMLActuator.prototype.gunForValue = function (value) {
+  var index = Math.round(Math.log(value) / Math.LN2) - 1;
+  return this.guns[Math.min(index, this.guns.length - 1)];
 };
 
 HTMLActuator.prototype.applyClasses = function (element, classes) {
