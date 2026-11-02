@@ -5,7 +5,17 @@ $field-width: 500px;
 $grid-spacing: 15px;
 $grid-row-cells: 4;
 $tile-size: ($field-width - $grid-spacing * ($grid-row-cells + 1)) / $grid-row-cells;
-$tile-border-radius: 3px;
+$tile-border-radius: 0;
+
+// Tiles look slightly see-through, but are pre-blended with the board color
+// and stay solid: merged tiles are stacked, so real transparency would show
+// the tiles underneath
+$tile-backdrop: #2b2d3a;
+$tile-strength: 82%;
+
+@function tile-tint($color) {
+  @return mix($color, $tile-backdrop, $tile-strength);
+}
 
 $mobile-threshold: $field-width + 20px;
 
@@ -41,7 +51,11 @@ html {
     radial-gradient(ellipse at 50% -10%, rgba($accent-color, .22), transparent 60%),
     linear-gradient(115deg, transparent 68%, rgba($accent-color, .07) 68%, rgba($accent-color, .07) 76%, transparent 76%),
     repeating-linear-gradient(135deg, rgba(white, .025) 0, rgba(white, .025) 2px, transparent 2px, transparent 24px),
-    linear-gradient(180deg, #17232e, $page-background);
+    // Navy wash over the loading-screen art to keep it faint
+    linear-gradient(180deg, rgba(#17232e, .82), rgba($page-background, .9)),
+    url("../img/background.png");
+  background-size: auto, auto, auto, auto, cover;
+  background-position: center;
   background-attachment: fixed;
 }
 
@@ -182,6 +196,73 @@ hr {
   line-height: 42px;
 }
 
+// Valorant result banner: a tinted band with white edge lines and corner
+// caps, laid over a translucent outlined Valorant "V"
+@mixin result-banner($bar-fill, $bar-edge, $band-mid, $band-end) {
+  $band-top: 175px;
+  $band-height: 110px;
+  $cap: linear-gradient(white, white);
+
+  background: rgba($page-background, .78);
+
+  .result-logo {
+    display: block;
+    position: absolute;
+    top: 14%;
+    left: 13%;
+    width: 74%;
+
+    polygon {
+      fill: rgba($bar-fill, .7);
+      stroke: rgba($bar-edge, .9);
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+  }
+
+  p {
+    position: relative;
+    z-index: 1;
+    margin-top: $band-top;
+    height: $band-height;
+    line-height: $band-height;
+
+    font-size: 68px;
+    font-weight: normal;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 14px;
+    padding-left: 14px; // Re-center text after the trailing letter-spacing
+
+    border-top: 1px solid rgba(white, .7);
+    border-bottom: 1px solid rgba(white, .7);
+    background: $cap top left / 28px 4px no-repeat,
+                $cap top right / 28px 4px no-repeat,
+                $cap bottom left / 28px 4px no-repeat,
+                $cap bottom right / 28px 4px no-repeat,
+                linear-gradient(90deg, rgba($band-end, .85), rgba($band-mid, .8) 50%, rgba($band-end, .85));
+  }
+
+  // Small readout in the banner's bottom-right corner
+  .final-score {
+    display: block;
+    position: absolute;
+    z-index: 2;
+    top: $band-top + $band-height - 24px;
+    right: 26px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: $bar-edge;
+  }
+
+  .lower {
+    position: relative;
+    z-index: 1;
+  }
+}
+
 // Game field mixin used to render CSS at different width
 @mixin game-field {
   .game-container {
@@ -200,7 +281,10 @@ hr {
     -ms-touch-action: none;
     touch-action: none;
 
-    background: $game-container-background;
+    // Buy-screen panel: mostly see-through with a thin light outline
+    background: rgba($page-background, .45);
+    box-shadow: inset 0 0 0 1px rgba($tile-color, .14),
+                0 10px 40px rgba(black, .35);
     border-radius: $tile-border-radius * 2;
     width: $field-width;
     height: $field-width;
@@ -250,12 +334,22 @@ hr {
       @include animation-fill-mode(both);
 
       &.game-won {
-        background: rgba($accent-color, .45);
-        color: $bright-text-color;
-
 	a.keep-playing-button {
 	  display: inline-block;
 	}
+      }
+
+      .final-score, .result-logo {
+        display: none;
+      }
+
+      // Valorant-style result screens
+      &.game-won {
+        @include result-banner(#1f5c4c, #6be0c0, #123a30, #08140f);
+      }
+
+      &.game-over {
+        @include result-banner(#8c1d2a, $accent-color, #4a1019, #1a0a0f);
       }
 
       &.game-won, &.game-over {
@@ -291,7 +385,9 @@ hr {
 
     border-radius: $tile-border-radius;
 
-    background: rgba($tile-color, .06);
+    // Empty weapon slot: frosted slate panel like the buy menu
+    background: rgba(#b8b4c4, .13);
+    box-shadow: inset 0 0 0 1px rgba(white, .07);
 
     &:last-child {
       margin-right: 0;
@@ -332,7 +428,7 @@ hr {
   .tile-inner {
     border-radius: $tile-border-radius;
 
-    background: $tile-color;
+    background: tile-tint($tile-color);
     text-align: center;
     font-weight: bold;
     z-index: 10;
@@ -391,7 +487,7 @@ hr {
       }
 
       // Set background
-      background: nth($nth-color, 1);
+      background: tile-tint(nth($nth-color, 1));
 
       // Add a red glow to the expensive guns
       $glow-opacity: max($exponent - 6, 0) / ($limit - 6);
@@ -424,7 +520,7 @@ hr {
   // Super tiles (above 2048)
   &.tile-super .tile-inner {
     color: $bright-text-color;
-    background: #0a1016;
+    background: tile-tint(#0a1016);
     box-shadow: 0 0 30px 10px rgba($tile-glow-color, .5),
                 inset 0 0 0 2px $accent-color;
 
@@ -500,7 +596,7 @@ hr {
   $grid-spacing: 10px !global;
   $grid-row-cells: 4 !global;
   $tile-size: ($field-width - $grid-spacing * ($grid-row-cells + 1)) / $grid-row-cells !global;
-  $tile-border-radius: 3px !global;
+  $tile-border-radius: 0 !global;
   $game-container-margin-top: 17px !global;
 
   html, body {
@@ -566,6 +662,26 @@ hr {
 
     .lower {
       margin-top: 30px !important;
+    }
+  }
+
+  // Smaller result banners
+  .game-container .game-message.game-won,
+  .game-container .game-message.game-over {
+    p {
+      font-size: 34px !important;
+      height: 64px !important;
+      line-height: 64px !important;
+      margin-top: 92px !important;
+      letter-spacing: 8px;
+      padding-left: 8px;
+    }
+
+    .final-score {
+      top: 92px + 64px - 16px;
+      right: 12px;
+      font-size: 8px;
+      letter-spacing: 2px;
     }
   }
 }
